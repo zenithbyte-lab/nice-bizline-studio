@@ -102,7 +102,14 @@ def run_windows_app(port: int = DEFAULT_PORT) -> int:
         daemon=True,
     ).start()
     app = create_app(settings)
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=port,
+        log_level="warning",
+        access_log=False,
+        log_config=None,
+    )
     return 0
 
 
