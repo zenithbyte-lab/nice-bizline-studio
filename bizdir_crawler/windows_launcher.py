@@ -21,6 +21,7 @@ DEFAULT_WORKERS = 8
 DEFAULT_ORIGIN_BASE_URL = "https://test.databasesets.com"
 DEFAULT_ORIGIN_HOST_HEADER = "kor.bizdirlib.com"
 APP_TITLE = "KorBizDir Studio"
+_DEVNULL_STREAMS: list[object] = []
 
 
 def app_base_dir() -> Path:
@@ -90,7 +91,20 @@ def show_error(message: str) -> None:
         ctypes.windll.user32.MessageBoxW(0, message, APP_TITLE, 0x10)
 
 
+def ensure_standard_streams() -> None:
+    if sys.stdin is None:
+        sys.stdin = open(os.devnull, "r", encoding="utf-8")
+        _DEVNULL_STREAMS.append(sys.stdin)
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+        _DEVNULL_STREAMS.append(sys.stdout)
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+        _DEVNULL_STREAMS.append(sys.stderr)
+
+
 def run_windows_app(port: int = DEFAULT_PORT) -> int:
+    ensure_standard_streams()
     base_dir = app_base_dir()
     settings = build_runtime_settings(base_dir, port=port)
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)

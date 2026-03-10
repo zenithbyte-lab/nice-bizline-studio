@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import bizdir_crawler.windows_launcher as windows_launcher
 from bizdir_crawler.windows_launcher import build_runtime_settings, parse_listening_pids, run_windows_app
 
 
@@ -50,6 +51,22 @@ class WindowsLauncherTests(unittest.TestCase):
         self.assertIsNone(kwargs["log_config"])
         self.assertFalse(kwargs["access_log"])
         self.assertEqual(kwargs["log_level"], "warning")
+
+    def test_ensure_standard_streams_redirects_missing_streams(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sink_path = Path(tmp) / "nul.txt"
+            with (
+                patch("bizdir_crawler.windows_launcher.os.devnull", str(sink_path)),
+                patch("bizdir_crawler.windows_launcher.sys.stdout", None),
+                patch("bizdir_crawler.windows_launcher.sys.stderr", None),
+            ):
+                windows_launcher.ensure_standard_streams()
+                self.assertIsNotNone(windows_launcher.sys.stdout)
+                self.assertIsNotNone(windows_launcher.sys.stderr)
+                self.assertTrue(hasattr(windows_launcher.sys.stdout, "write"))
+                self.assertTrue(hasattr(windows_launcher.sys.stderr, "write"))
+                windows_launcher.sys.stdout.close()
+                windows_launcher.sys.stderr.close()
 
 
 if __name__ == "__main__":
