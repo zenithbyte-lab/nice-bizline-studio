@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Crawler Dashboard{% endblock %}
+{% block content %}
+<div class="dashboard" data-dashboard data-job-id="{{ active_job_id }}">
+  <aside class="panel controls">
+    <div class="panel-head">
+      <div>
+        <p class="mini-label">配置</p>
+        <h2>地区与抓取范围</h2>
+      </div>
+      <form method="post" action="/areas/refresh">
+        <button class="ghost" type="submit">刷新</button>
+      </form>
+    </div>
+    <p class="hint">多选地区后，系统会按你设置的每地区公司上限自动翻页，直到抓够或没有下一页。右侧实时显示日志和累计结果。</p>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <form class="crawl-form" method="post" action="/jobs" data-crawl-form>
+      <div class="controls-grid">
+        <label>每地区最多公司<input type="number" name="company_limit" min="1" value="{{ defaults.company_limit or '' }}"></label>
+        <label>线程数<input type="number" name="workers" min="1" max="24" value="{{ defaults.workers }}"></label>
+      </div>
+      <div class="area-toolbar">
+        <label class="search-field">
+          <span>搜索地区</span>
+          <input id="area-filter" type="search" placeholder="输入地区名筛选">
+        </label>
+        <div class="area-actions">
+          <button class="ghost compact" id="select-all-areas" type="button">全选</button>
+          <button class="ghost compact" id="clear-areas" type="button">清空</button>
+        </div>
+      </div>
+      <div class="area-summary">
+        <strong id="selected-area-count">0</strong>
+        <span>已选地区</span>
+        <span class="area-summary-total">共 {{ areas|length }} 个地区</span>
+      </div>
+      <div class="area-list" id="area-list">
+        {% for area in areas %}
+        <label class="area-row" data-area-name="{{ area.name|lower }}">
+          <input type="checkbox" name="area_ids" value="{{ area.term_id }}">
+          <span>{{ area.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <button class="primary wide" type="submit">开始抓取</button>
+    </form>
+  </aside>
+
+  <section class="panel console">
+    <div class="panel-head">
+      <div>
+        <p class="mini-label">运行中</p>
+        <h2>日志</h2>
+      </div>
+      <a id="download-link" class="ghost {% if not active_job_id %}is-hidden{% endif %}" href="{% if active_job_id %}/jobs/{{ active_job_id }}/download.csv{% else %}#{% endif %}">下载 CSV</a>
+    </div>
+    <div class="stats-strip">
+      <div><span>状态</span><strong id="metric-status">idle</strong></div>
+      <div><span>地区</span><strong id="metric-areas">0/0</strong></div>
+      <div><span>发现公司</span><strong id="metric-found">0</strong></div>
+      <div><span>已保存</span><strong id="metric-saved">0</strong></div>
+    </div>
+    <div class="log-box">
+      <ol id="log-list" class="log-list">
+        {% if active_job_id %}
+        <li class="log-item">正在载入任务 {{ active_job_id[:8] }} 的日志...</li>
+        {% else %}
+        <li class="log-item">选地区并开始抓取后，日志会显示在这里。</li>
+        {% endif %}
+      </ol>
+    </div>
+    <div class="recent-jobs">
+      <span>最近任务</span>
+      <div class="recent-links">
+        {% for job in jobs %}
+        <a href="/?job_id={{ job.id }}">{{ job.id[:8] }} · {{ job.status }} · {{ job.saved_count }}</a>
+        {% else %}
+        <span class="hint">暂无任务</span>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+<script src="{{ request.url_for('static', path='dashboard.js') }}"></script>
+{% endblock %}

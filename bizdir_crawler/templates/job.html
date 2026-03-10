@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job.id[:8] }}{% endblock %}
+{% block head %}
+{% if job.status in ["queued", "running"] %}
+<meta http-equiv="refresh" content="5">
+{% endif %}
+{% endblock %}
+{% block content %}
+<section class="grid">
+  <article class="card">
+    <div class="card-head">
+      <h2>任务状态</h2>
+      <a class="ghost" href="/jobs/{{ job.id }}/download.csv">下载 CSV</a>
+    </div>
+    <div class="stats">
+      <div><span>状态</span><strong>{{ job.status }}</strong></div>
+      <div><span>地区</span><strong>{{ job.processed_count }}/{{ job.selected_count }}</strong></div>
+      <div><span>发现公司</span><strong>{{ job.discovered_count }}</strong></div>
+      <div><span>已保存</span><strong>{{ job.saved_count }}</strong></div>
+    </div>
+    <p class="hint">{{ job.message }}</p>
+  </article>
+
+  <article class="card">
+    <h2>地区进度</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>地区</th><th>状态</th><th>发现</th><th>保存</th></tr></thead>
+        <tbody>
+          {% for area in areas %}
+          <tr><td>{{ area.area_name }}</td><td>{{ area.status }}</td><td>{{ area.discovered_count }}</td><td>{{ area.saved_count }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="card span-2">
+    <h2>已保存样本</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>公司</th><th>联系人</th><th>网站</th><th>地区</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr><td>{{ row.company_name }}</td><td>{{ row.contact }}</td><td>{{ row.website }}</td><td>{{ row.area }}</td></tr>
+          {% else %}
+          <tr><td colspan="4">任务还没写入数据。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}

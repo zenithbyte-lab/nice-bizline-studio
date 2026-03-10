@@ -1,0 +1,14 @@
+[project]
+name = "bizdir-crawler"
+version = "0.1.0"
+description = "Non-browser BizDirLib crawler"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "httpx>=0.27",
+  "jinja2>=3.1",
+  "uvicorn>=0.29",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
