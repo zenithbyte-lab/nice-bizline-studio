@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "bizdir-crawler"
 version = "0.1.0"
@@ -9,6 +13,14 @@ dependencies = [
   "jinja2>=3.1",
   "uvicorn>=0.29",
 ]
+
+[tool.setuptools]
+packages = ["bizdir_crawler"]
+py-modules = ["kor_bizdirlib_fetch", "windows_launcher"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+bizdir_crawler = ["templates/*.html", "static/*.css", "static/*.js"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

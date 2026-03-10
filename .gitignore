@@ -10,6 +10,7 @@ build/
 dist/
 release/
 *.spec
+*.egg-info/
 tmp/
 data/
 .codex/
