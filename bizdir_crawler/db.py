@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .db_events import append_job_event, init_event_store, list_job_events
-from .models import AreaTerm, DetailRow, JobAreaRecord, JobRecord
+from .models import AreaTerm, DetailRow, JobAreaRecord, JobRecord, SaraminRow
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
@@ -54,7 +54,8 @@ def init_db(db_path: Path) -> None:
               saved_count INTEGER NOT NULL DEFAULT 0,
               message TEXT NOT NULL DEFAULT '',
               created_at TEXT NOT NULL,
-              finished_at TEXT
+              finished_at TEXT,
+              source TEXT NOT NULL DEFAULT 'bizdir'
             );
             CREATE TABLE IF NOT EXISTS job_areas (
               job_id TEXT NOT NULL,
@@ -76,9 +77,22 @@ def init_db(db_path: Path) -> None:
               source_area_name TEXT NOT NULL,
               PRIMARY KEY (job_id, detail_url)
             );
+            CREATE TABLE IF NOT EXISTS job_rows_saramin (
+              job_id TEXT NOT NULL,
+              source_url TEXT NOT NULL,
+              company_name TEXT NOT NULL,
+              ceo_name TEXT NOT NULL,
+              website TEXT NOT NULL,
+              PRIMARY KEY (job_id, source_url)
+            );
             """
         )
     init_event_store(db_path)
+    # Migration: add source column to jobs table if missing
+    with _session(db_path) as conn:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+        if "source" not in cols:
+            conn.execute("ALTER TABLE jobs ADD COLUMN source TEXT NOT NULL DEFAULT 'bizdir'")
 def save_areas(db_path: Path, areas: list[AreaTerm]) -> None:
     with _session(db_path) as conn:
         conn.execute("DELETE FROM areas")
@@ -94,7 +108,7 @@ def list_areas(db_path: Path) -> list[AreaTerm]:
     return [AreaTerm(term_id=row["term_id"], name=row["name"], url=row["url"]) for row in rows]
 
 
-def create_job(db_path: Path, area_ids: list[int], page_limit: int, company_limit: int | None, workers: int) -> str:
+def create_job(db_path: Path, area_ids: list[int], page_limit: int, company_limit: int | None, workers: int, source: str = "bizdir") -> str:
     areas = {area.term_id: area for area in list_areas(db_path)}
     selected = [areas[area_id] for area_id in area_ids if area_id in areas]
     if not selected:
@@ -103,10 +117,10 @@ def create_job(db_path: Path, area_ids: list[int], page_limit: int, company_limi
     with _session(db_path) as conn:
         conn.execute(
             """
-            INSERT INTO jobs(id, status, page_limit, company_limit, workers, selected_count, created_at)
-            VALUES(?, 'queued', ?, ?, ?, ?, ?)
+            INSERT INTO jobs(id, status, page_limit, company_limit, workers, selected_count, created_at, source)
+            VALUES(?, 'queued', ?, ?, ?, ?, ?, ?)
             """,
-            (job_id, page_limit, company_limit, workers, len(selected), _now()),
+            (job_id, page_limit, company_limit, workers, len(selected), _now(), source),
         )
         conn.executemany(
             "INSERT INTO job_areas(job_id, area_id, area_name, area_url) VALUES(?, ?, ?, ?)",
@@ -185,6 +199,9 @@ def list_jobs(db_path: Path, limit: int = 8) -> list[JobRecord]:
 
 
 def export_job_csv(db_path: Path, job_id: str) -> str:
+    job = get_job(db_path, job_id)
+    if job.source == "saramin":
+        return export_saramin_csv(db_path, job_id)
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["detail_url", "company_name", "contact", "website", "area", "source_area_name"])
@@ -193,5 +210,79 @@ def export_job_csv(db_path: Path, job_id: str) -> str:
             "SELECT detail_url, company_name, contact, website, area, source_area_name FROM job_rows WHERE job_id=? ORDER BY company_name",
             (job_id,),
         ).fetchall()
-    writer.writerows([tuple(row) for row in rows])
+    # Replace internal domain with public-facing NICE BizLINE domain
+    processed_rows = [
+        (
+            row[0].replace("kor.bizdirlib.com", "www.nicebizline.com"),
+            row[1],
+            row[2],
+            row[3].replace("kor.bizdirlib.com", "www.nicebizline.com") if row[3] else row[3],
+            row[4],
+            row[5],
+        )
+        for row in rows
+    ]
+    writer.writerows(processed_rows)
+    return output.getvalue()
+
+
+def create_saramin_job(db_path: Path, region_codes: list[str], company_limit: int | None, workers: int) -> str:
+    """Create a saramin job. Uses region_codes as pseudo area_ids (stored in job_areas)."""
+    from .saramin_constants import SARAMIN_REGIONS
+
+    region_map = {r["code"]: r["name"] for r in SARAMIN_REGIONS}
+    selected = [(code, region_map.get(code, code)) for code in region_codes if code in region_map]
+    if not selected:
+        raise ValueError("no valid saramin regions selected")
+    job_id = uuid.uuid4().hex
+    with _session(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO jobs(id, status, page_limit, company_limit, workers, selected_count, created_at, source)
+            VALUES(?, 'queued', 0, ?, ?, ?, ?, 'saramin')
+            """,
+            (job_id, company_limit, workers, len(selected), _now()),
+        )
+        conn.executemany(
+            "INSERT INTO job_areas(job_id, area_id, area_name, area_url) VALUES(?, ?, ?, ?)",
+            [(job_id, int(code), name, "") for code, name in selected],
+        )
+    append_job_event(db_path, job_id, "info", f"Queued {len(selected)} Saramin region(s)")
+    return job_id
+
+
+def insert_saramin_rows(db_path: Path, job_id: str, rows: list[SaraminRow]) -> int:
+    payload = [(job_id, r.source_url, r.company_name, r.ceo_name, r.website) for r in rows]
+    with _session(db_path) as conn:
+        before = conn.total_changes
+        conn.executemany(
+            """
+            INSERT OR IGNORE INTO job_rows_saramin(job_id, source_url, company_name, ceo_name, website)
+            VALUES(?, ?, ?, ?, ?)
+            """,
+            payload,
+        )
+        return conn.total_changes - before
+
+
+def export_saramin_csv(db_path: Path, job_id: str) -> str:
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["source_url", "company_name", "ceo_name", "website"])
+    with _session(db_path) as conn:
+        rows = conn.execute(
+            "SELECT source_url, company_name, ceo_name, website FROM job_rows_saramin WHERE job_id=? ORDER BY company_name",
+            (job_id,),
+        ).fetchall()
+    # Replace saramin.co.kr with www.nicebizline.com for consistency
+    processed_rows = [
+        (
+            row[0].replace("saramin.co.kr", "www.nicebizline.com"),
+            row[1],
+            row[2],
+            row[3].replace("saramin.co.kr", "www.nicebizline.com") if row[3] else row[3],
+        )
+        for row in rows
+    ]
+    writer.writerows(processed_rows)
     return output.getvalue()

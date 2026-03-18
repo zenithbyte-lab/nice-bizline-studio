@@ -1,4 +1,4 @@
-name: Build KorBizDir Studio EXE
+name: Build NICE BizLINE Studio EXE
 
 on:
   workflow_dispatch:
@@ -39,7 +39,7 @@ jobs:
             --clean `
             --onefile `
             --windowed `
-            --name KorBizDirStudio `
+            --name NiceBizLineStudio `
             --collect-data bizdir_crawler `
             --collect-submodules uvicorn `
             --collect-submodules fastapi `
@@ -52,13 +52,13 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release | Out-Null
-          Copy-Item dist\KorBizDirStudio.exe release\
+          Copy-Item dist\NiceBizLineStudio.exe release\
           Copy-Item README.md release\
-          Compress-Archive -Path release\* -DestinationPath KorBizDirStudio-windows.zip -Force
+          Compress-Archive -Path release\* -DestinationPath NiceBizLineStudio-windows.zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KorBizDirStudio-windows
-          path: KorBizDirStudio-windows.zip
+          name: NiceBizLineStudio-windows
+          path: NiceBizLineStudio-windows.zip
           if-no-files-found: error

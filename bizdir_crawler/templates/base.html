@@ -3,21 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Kor BizDirLib Crawler{% endblock %}</title>
+  <title>{% block title %}NICE BizLINE Crawler{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ request.url_for('static', path='app.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
   <div class="shell">
-    <header class="hero">
-      <p class="eyebrow">KOR BIZDIRLIB</p>
-      <h1><a href="/">Area Crawl Studio</a></h1>
-      <p class="subtitle">单页抓取台。左边选项，右边日志，抓完直接下载。</p>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <a href="/">NICE BizLINE</a>
+      </div>
+      <p class="tagline">韩国企业信息专业知识门户 · 1,100万+ 企业数据</p>
     </header>
-    <main>{% block content %}{% endblock %}</main>
+    <main class="main-area">{% block content %}{% endblock %}</main>
   </div>
 </body>
 </html>

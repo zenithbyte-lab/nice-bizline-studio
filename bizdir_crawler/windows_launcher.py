@@ -20,7 +20,7 @@ DEFAULT_COMPANY_LIMIT = 50
 DEFAULT_WORKERS = 8
 DEFAULT_ORIGIN_BASE_URL = "https://test.databasesets.com"
 DEFAULT_ORIGIN_HOST_HEADER = "kor.bizdirlib.com"
-APP_TITLE = "KorBizDir Studio"
+APP_TITLE = "NICE BizLINE Studio"
 _DEVNULL_STREAMS: list[object] = []
 
 

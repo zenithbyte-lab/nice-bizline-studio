@@ -13,8 +13,8 @@ class _InlineRunner:
     def __init__(self) -> None:
         self.started = []
 
-    def start(self, job_id: str, area_ids: list[int], settings: AppSettings) -> None:
-        self.started.append((job_id, area_ids, settings.page_limit, settings.company_limit, settings.workers))
+    def start(self, job_id: str, area_ids: list[int], settings: AppSettings, source: str = "bizdir") -> None:
+        self.started.append((job_id, area_ids, settings.page_limit, settings.company_limit, settings.workers, source))
 
 
 class WebAppTests(unittest.TestCase):
@@ -53,7 +53,7 @@ class WebAppTests(unittest.TestCase):
 
             response = client.post(
                 "/jobs",
-                data={"area_ids": ["2", "57"], "company_limit": "20", "workers": "6"},
+                data={"area_ids": ["2", "57"], "company_limit": "20", "workers": "6", "source": "bizdir"},
                 follow_redirects=False,
             )
             self.assertEqual(response.status_code, 303)

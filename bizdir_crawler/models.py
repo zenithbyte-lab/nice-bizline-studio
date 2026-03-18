@@ -32,6 +32,14 @@ class TermListing:
 
 
 @dataclass(frozen=True)
+class SaraminRow:
+    company_name: str
+    ceo_name: str
+    website: str
+    source_url: str
+
+
+@dataclass(frozen=True)
 class JobRecord:
     id: str
     status: str
@@ -45,6 +53,7 @@ class JobRecord:
     message: str
     created_at: str
     finished_at: str | None
+    source: str = "bizdir"
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
-# KorBizDir Studio
+# NICE BizLINE Studio
 
-A small non-browser crawler project for `kor.bizdirlib.com` with both CLI and web UI.
+A small non-browser crawler project for `www.nicebizline.com` with both CLI and web UI.
 
 ## Features
 
